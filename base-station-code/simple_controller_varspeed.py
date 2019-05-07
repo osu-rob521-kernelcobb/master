@@ -1,8 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue May  7 15:20:44 2019
+
+@author: Zeke
+"""
+
 import pygame
 
 import serial
 import time
-ser = serial.Serial('/dev/cu.DSDTECHHC-05-DevB',9600,timeout=5)
+ser = serial.Serial('/dev/cu.DSDTECHHC-05-DevB',115200,timeout=5)
+#ser = serial.Serial('/dev/cu.usbmodem14101',115200,timeout=5)
 time.sleep(2)
 print(ser.name)
 print("Connected")
@@ -49,7 +58,11 @@ _joystick.init()
 robot_state = 0
 teleop = True
 left_wheel = 0.0
+left_wheel_d1 = left_wheel
 right_wheel = 0.0
+right_wheel_d1 = right_wheel
+thresh = 0.05
+
 last_command = " "
 ser.write(bytes(last_command,'utf-8'))
 while teleop:
@@ -90,23 +103,28 @@ while teleop:
 				if abs(right_wheel) < THUMB_DEADZONE:
 					right_wheel = 0.0
 				print("Right Wheel Speed: ",right_wheel)
+				
+			if abs(right_wheel - right_wheel_d1) > thresh or abs(left_wheel - left_wheel_d1) > thresh:
+				command = "w," + format(left_wheel,'.2f') + "," + format(right_wheel,'.2f')
+				right_wheel_d1 = right_wheel
+				left_wheel_d1 = left_wheel
             
-			if left_wheel > 0.5 and right_wheel > 0.5:
-				drive_command = "w"
-			elif left_wheel > 0.5 and right_wheel < -0.5:
-				drive_command = "d"
-			elif left_wheel < -0.5 and right_wheel > 0.5:
-				drive_command = "a"
-			elif left_wheel < -0.5 and right_wheel < -0.5:
-				drive_command = "s"
-			else:
-				drive_command = " "
+#			if left_wheel > 0.5 and right_wheel > 0.5:
+#				drive_command = "w"
+#			elif left_wheel > 0.5 and right_wheel < -0.5:
+#				drive_command = "d"
+#			elif left_wheel < -0.5 and right_wheel > 0.5:
+#				drive_command = "a"
+#			elif left_wheel < -0.5 and right_wheel < -0.5:
+#				drive_command = "s"
+#			else:
+#				drive_command = " "
 			
-			if drive_command != last_command:
-				command = drive_command
+#			if drive_command != last_command:
+#				command = drive_command
 				
 	if command != "1":
-		command = command + "\n"
+		command = "<" + command + ">"
 		print("Command: ", command)
 		ser.write(bytes(command,'utf-8'))
 		last_command = command
@@ -114,35 +132,9 @@ while teleop:
 	if(ser.inWaiting()>0):
 		myData = ser.readline()
 		print(myData)
-#	xdir = _joystick.get_axis(0)
-#	print(xdir)
-#	rtrigger = _joystick.get_axis(5)
-#	#deadzone
-#	if abs(xdir) < 0.2:
-#		xdir = 0.0
-#	if rtrigger < -0.9:
-#		rtrigger = -1.0
-# 
+	
 	clock.tick(30)
- 
- 
-		
- 
-	'''
-	print _joystick.get_init()
-	print _joystick.get_id()
-	print _joystick.get_name()
-	print _joystick.get_numaxes()
-	print _joystick.get_numballs()
-	print _joystick.get_numbuttons()
-	print _joystick.get_numhats()
-	print _joystick.get_axis(0)
-	print _joystick.get_button(0)
-	n = _joystick.get_numbuttons()
-	axesnum = _joystick.get_numaxes()
-	for i in range(axesnum):
-		print _joystick.get_axis(i)
-		'''
- 
+
+
 ser.write(bytes(' ','utf-8'))
 ser.close()
