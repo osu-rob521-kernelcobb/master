@@ -91,6 +91,12 @@ while teleop:
 			if event.button == Y_BUTTON:
 				print("Sensing range")
 				command = "z"
+			if event.button == X_BUTTON:
+				print("Reverse thrower")
+				command = "m"
+			if event.button == B_BUTTON:
+				print("Stop thrower")
+				command = "l"
 				
 		if event.type == pygame.JOYAXISMOTION:
 			if event.axis == LEFT_STICK_Y:

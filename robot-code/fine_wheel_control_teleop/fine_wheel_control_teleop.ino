@@ -1,3 +1,5 @@
+// Serial string parsing from https://forum.arduino.cc/index.php?topic=396450.0 //
+
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
@@ -5,7 +7,7 @@ int sensorPin = A0;
 const int backSwitchPin = 2;
 const int frontSwitchPin = 3;
 const long debounce_ms = 200;
-volatile bool shootFinish = false;
+volatile bool shooting = false;
 const int dirReloadPin = 13;
 const int stepReloadPin = 12;
 
@@ -180,22 +182,25 @@ void driveForward() {
   RW.write(commandRW);
   LW.write(commandLW);
 }
-void driveReverse() {
-  RW.write(RW_REV_max);
-  LW.write(LW_REV_max);
-}
-void turnLeft() {
-  RW.write(RW_FWD_max);
-  LW.write(LW_REV_max);
-}
-void turnRight() {
-  RW.write(RW_REV_max);
-  LW.write(LW_FWD_max);
-}
-void driveStop() {
-  RW.write(neutral);
-  LW.write(neutral);
-}
+
+// Deprecated commands, drive at max value
+//void driveReverse() {
+//  RW.write(RW_REV_max);
+//  LW.write(LW_REV_max);
+//}
+//void turnLeft() {
+//  RW.write(RW_FWD_max);
+//  LW.write(LW_REV_max);
+//}
+//void turnRight() {
+//  RW.write(RW_REV_max);
+//  LW.write(LW_FWD_max);
+//}
+//void driveStop() {
+//  RW.write(neutral);
+//  LW.write(neutral);
+//}
+
 void moveRack(int dir, int time_ms) {
   if (dir == 1) {
     RK.write(RK_CW);
@@ -206,22 +211,24 @@ void moveRack(int dir, int time_ms) {
   delay(time_ms);
   RK.write(RK_stop);
 }
+
 void pin_ISR() {
   static unsigned long last_interrupt_time = 0;
   unsigned long interrupt_time = millis();
   int backSwitchState = digitalRead(backSwitchPin);
   int frontSwitchState = digitalRead(frontSwitchPin);
   if(interrupt_time - last_interrupt_time > debounce_ms) {
-    if (backSwitchState == HIGH) {
+    if (backSwitchState == HIGH && shooting) {
       WM.write(CCW_max);
     }
-    else if (frontSwitchState == HIGH) {
+    else if (frontSwitchState == HIGH && shooting) {
       WM.write(neutral);
-      shootFinish = true;
+      shooting = false;
     }
     last_interrupt_time = interrupt_time;
   }
 }
+
 void reload(int dir, int time_ms) {
   if (dir == 1) {
     digitalWrite(dirReloadPin,HIGH);
@@ -243,9 +250,7 @@ float readSensor() {
 
 void shootBeanbag() {
   WM.write(CW_max);
-  while(!shootFinish);
-  WM.write(neutral);
-  shootFinish = false;
+  shooting = true;
 }
 
 void actOnCommand() {
@@ -254,26 +259,26 @@ void actOnCommand() {
     driveForward();
     Serial.println("drive");
   }
-  else if(commandFromPC[0] == 'a') {
-    turnLeft();
-    Serial.println("left");
-  }
-  else if(commandFromPC[0] == 's') {
-    driveReverse();
-    Serial.println("reverse");
-  }
-  else if(commandFromPC[0] == 'd') {
-    turnRight();
-    Serial.println("right");
-  }
+//  else if(commandFromPC[0] == 'a') {
+//    turnLeft();
+//    Serial.println("left");
+//  }
+//  else if(commandFromPC[0] == 's') {
+//    driveReverse();
+//    Serial.println("reverse");
+//  }
+//  else if(commandFromPC[0] == 'd') {
+//    turnRight();
+//    Serial.println("right");
+//  }
   else if(commandFromPC[0] == 'f') {
     Serial.println("Shoot");
     shootBeanbag();
   }
-  else if(commandFromPC[0] == ' ') {
-    driveStop();
-    Serial.println("stop");
-  }
+//  else if(commandFromPC[0] == ' ') {
+//    driveStop();
+//    Serial.println("stop");
+//  }
   else if(commandFromPC[0] == 't') {
     moveRack(1,100);
     Serial.println("move pinion forward");
@@ -292,6 +297,14 @@ void actOnCommand() {
   }
   else if(commandFromPC[0] == 'z') {
     Serial.println("Sensor reading: " + String(readSensor()));
+  }
+  else if(commandFromPC[0] == 'm') {
+    Serial.println("Reverse shooter");
+    WM.write(CCW_max);
+  }
+  else if(commandFromPC[0] == 'l') {
+    Serial.println("Stop shooter");
+    WM.write(neutral);
   }
   else {
     Serial.println("Command not recognized!");
